@@ -1,0 +1,5 @@
+source https://www.nuget.org/api/v2
+framework:auto-detect
+nuget FParsec
+nuget fsharp.data
+nuget XPlot.GoogleCharts
