@@ -8,7 +8,18 @@ let (>.) p x = p |>> fun _ -> x
 let [<Literal>] silent = "h"
 
 //S like Sound
-let pSchar c = pchar c <|> (anyOf silent >>? pchar c)
+let accentLess = function
+    | 'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' -> 'a'
+    | 'æ' | 'è' | 'é' | 'ê' | 'ë'       -> 'e'
+    | 'ì' | 'í' | 'î' | 'ï'             -> 'i'
+    | 'ð' | 'ò' | 'ó' | 'ô' | 'õ' | 'ö' -> 'o'
+    | 'ñ'                               -> 'n'
+    | 'ç'                               -> 's'
+    | c                                 ->  c
+
+let pSchar c = 
+    (pchar c <|> (anyOf silent >>? pchar c))
+
 let (~~) = pSchar
 
 let pI = ~~'y' <|> ~~'i'
@@ -77,7 +88,7 @@ run pAin "aine"
 let pOua = pO >>? !!"ua" >. [ 2 - 1 ] <??> "sound oua"
 run pOua "oua"
 
-let pAi = sAnyOf "éèê" <|> pAei >. [ 20 ] <??> "sound é"
+let pAi = (pAei >. [ 20 ] <??> "sound ai")
 run pAi "é"
 
 let pEr = !!"er" >. [ 20; 14 ] <??> "sound er"
@@ -150,7 +161,7 @@ let pRest =
     |> List.fold (fun s (c, score) -> s <|> (~~c >. score)) pzero
     |>> List.singleton
     <??> "letter in the encoding phase"
-run pRest "e"
+run pRest "é"
 
 let p1 = 
         pCsh 
@@ -180,7 +191,7 @@ let p1 =
     <|> pMapping
     <|> pRest
 
-let p = many p1 |>> List.concat
+let p = many p1 |>> (List.concat >> List.fold (sprintf "%s%i") "")
 
 run p "salut!" 
 run p "csalut!" 
@@ -194,4 +205,7 @@ run p "gain"
 run p "gaim"
 
 
-run p "clément"
+run pMapping "é"
+run p "e"
+
+let phonex x = match (x:string).ToLower () |> run p with Success (r,_,_) -> r | ParserResult.Failure (x,y,z) -> failwithf "phonex failed with %A" (x,y,z)

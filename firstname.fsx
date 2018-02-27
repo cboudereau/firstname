@@ -46,18 +46,28 @@ open Text
 
 type [<Struct>] Year = Year of int
 type [<Struct>] FirstName = FirstName of string
-        
+
+#load "phonex2.fsx"        
+
+open Phonex2
+
+phonex "clement"
+
+#time
 let boys = 
     stats.Rows 
     |> Seq.choose (fun x -> 
         Int32.tryInt x.Annais 
-        |> Option.bind (fun y -> if x.Sexe = 1 then Some (Text.soundex x.Preusuel, (Year y, (FirstName x.Preusuel, x.Nombre))) else None) )
+        |> Option.bind (fun y -> if x.Sexe = 1 then Some (phonex x.Preusuel, (Year y, (FirstName x.Preusuel, x.Nombre))) else None) )
+    |> Seq.toList
 
 let datas = 
     boys
     |> Seq.groupBy fst
     |> Seq.map (fun (code, d) -> 
-        code, d |> Seq.map snd |> Seq.groupBy fst )
+        code, d |> Seq.map snd |> Seq.groupBy fst |> Seq.toList )
     |> Map.ofSeq
 
-datas |> Map.tryFind (soundex "clement")
+datas |> Map.tryFind (phonex "clément")
+
+phonex "clément"
