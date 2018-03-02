@@ -18,6 +18,7 @@ let between before after replacement source target =
     between 0 source
 let all = fun _ -> true
 let suffix f replacement source target = between all f replacement source target
+let prefix f replacement source target = between f all replacement source target
 
 let rI = replace "y" "i"
 let rF = replace "ph" "f" 
@@ -35,12 +36,12 @@ let tryIsNotVowel = tryIsVowel >> not
 
 let suffixL f replacement targets source = targets |> List.fold (suffix f replacement) source
 
-let rAin  = ["ain"; "ein"; "ain"; "eim"; "aim"] |> suffixL (Seq.tryHead >> tryIsVowel) "yn"
+let rAin  = ["ain"; "ein"; "ain"; "eim"; "aim"] |> suffixL (Seq.tryHead >> tryIsVowel) "en"
 
 let rO = replace "eau" "o"
 let rOua = replace "oua" "2"
 let rEin = replaceAny ["ein";"ain";"eim";"aim"] "4"
-let rAi = replaceAny ["ai";"ei"] "y"
+let rAi = replaceAny ["ai";"ei"] "e"
 let rEr = replace "er" "yr"
 let rEss = replace "ess" "yss"
 let rEt = replace "et" "yt"
@@ -65,12 +66,12 @@ let rGa = replace "ga" "ka"
 let rGo = replace "go" "ko"
 let rGy = replace "gy" "ky"
 
-let trim = 
+let trim letters = 
     Seq.distinct >> Seq.toArray
     >> fun y -> 
         let n = Array.length y - 1
         let c = y.[n] 
-        if ['x';'t'] |> List.exists ((=) c) then Array.take n y 
+        if letters |> List.exists ((=) c) then Array.take n y 
         else y
     >> System.String
 
@@ -93,9 +94,44 @@ let phonex =
     >> rZ >> rE >> rAu >> rOi >> rOu
     >> rS >> rC >> rK >> rGa >> rGo >> rGy
     >> rLast
-    >> trim
+    >> trim ['x';'t']
+
+let soundex2 = 
+    toLower >> accentLess
+    >> fun s -> 
+        if System.String.IsNullOrWhiteSpace(s) then s 
+        else 
+            s.Substring(1)
+            |> (rmapping [ "gui", "ki"
+                           "gue", "ke"
+                           "ga","ka"
+                           "go","ko"
+                           "gu","k"
+                           "ca","ka"
+                           "co","ko"
+                           "cu","ku"
+                           "q","k"
+                           "c","k"
+                           "ck","k"]
+                >> (Seq.map (fun c -> if isVowel c then 'a' else c) >> Seq.toArray >> System.String)
+                >> replaceAny ["sh"; "sch"] "ch"
+                >> rF
+                >> rmH
+                >> fun s -> prefix ((=) "a") "" s "y"
+                >> trim ['a';'t';'d';'s']
+                >> (Seq.filter ((<>)'a') >> Seq.toArray >> System.String))
+            |> (Seq.distinct >> Seq.toArray >> System.String)
+            |> sprintf "%c%s" s.[0]
+
+soundex2 "yolaine"
+soundex2 "yolène"
+soundex2 "clement"
+soundex2 "klement"
 
 phonex "PHYLAURHEIMSMET"
 
 phonex "clement"
 phonex "clement"
+
+phonex "yolaine"
+phonex "yolène"

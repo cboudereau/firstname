@@ -15,7 +15,6 @@ module Seq =
         >> Seq.groupBy (fun (a,_) -> a)
         >> Seq.map (fun (_,se) -> se |> Seq.map (snd) |> Seq.toArray)
 
-
 module Int32 = 
     let tryInt x = 
         match System.Int32.TryParse(x) with
@@ -62,8 +61,8 @@ let firstNames sex =
         Int32.tryInt x.Annais 
         |> Option.bind (fun y -> if x.Sexe = (sex |> Sex.value) then Some (FirstName x.Preusuel, (Year y, x.Nombre)) else None) )
 
-let phonetic = 
-    Seq.map (fun ((FirstName n), (y, c)) -> phonex n |> Phonetic, (y,(FirstName n,c)))
+let phonetic f = 
+    Seq.map (fun ((FirstName n), (y, c)) -> f n |> Phonetic, (y,(FirstName n,c)))
     >> Seq.groupBy fst
     >> Seq.map ( 
         Snd.map (
@@ -72,10 +71,16 @@ let phonetic =
             >> Seq.map (Snd.map (Seq.map snd)) 
             >> Seq.sortBy fst))
 
-let pGirl = firstNames Sex.Girl |> phonetic |> Seq.map fst |> Seq.toList
+let pGirl = firstNames Sex.Girl |> phonetic phonex
+
+//pGirl |> Seq.map (Snd.map (Seq.collect snd >> Seq.map fst >> Seq.distinct >> Seq.toList)) |> Map.ofSeq
+//|> Map.tryFind (phonex "yolène" |> Phonetic)
 
 let boys = firstNames Sex.Boy
-let pBoys = boys |> phonetic
+let pBoys = boys |> phonetic phonex
+
+pBoys |> Seq.map (Snd.map (Seq.collect snd >> Seq.map fst >> Seq.distinct >> Seq.toList)) |> Map.ofSeq
+|> Map.tryFind (phonex "clement" |> Phonetic)
 
 boys |> Seq.map fst |> Seq.distinct |> Seq.length //14256
 pBoys |> Seq.length //7634
@@ -85,7 +90,7 @@ let notComposedAndShort = notComposed |> Seq.filter (fst >> Phonetic.short)
 notComposedAndShort |> Seq.length //6154
 let notComposedAndTooShort = notComposedAndShort |> Seq.filter (fst >> Phonetic.little >> not)
 notComposedAndTooShort |> Seq.length //6021
-let onlyBoys = notComposedAndTooShort |> Seq.filter (fst >> (Phonetic.blacklist pGirl))
+let onlyBoys = notComposedAndTooShort |> Seq.filter (fst >> (Phonetic.blacklist (pGirl |> Seq.map fst |> Seq.toList)))
 onlyBoys |> Seq.length //3923
 
 let classic = onlyBoys |> Seq.filter (snd >> Seq.collect snd >> Seq.sumBy snd >> (<) 5000)
@@ -98,7 +103,7 @@ let graph average (data:(string * seq<System.DateTime*float>) list) =
     let points = data |> List.map snd
     let options =
         Options(
-            title = "TODO",
+            title = "Number of firstname by year and average",
             vAxis = Axis(title = "Count"),
             hAxis = Axis(title = "Year"),
             series =
@@ -115,20 +120,22 @@ let graph average (data:(string * seq<System.DateTime*float>) list) =
     |> Chart.Show
 
 let average = 
-    result 
-    |> Seq.collect (snd >> Seq.map (fun (y,c) -> y, c |> Seq.sumBy snd))
-    |> Seq.groupBy fst
-    |> Seq.map (fun (Year y,c) -> System.DateTime(y,1,1), c |> Seq.averageBy (snd >> float))
-    |> Seq.sortBy fst
-    |> Seq.toList
+    Seq.collect (snd >> Seq.map (Snd.map (Seq.sumBy snd)))
+    >> Seq.groupBy fst
+    >> Seq.map (fun (Year y,c) -> System.DateTime(y,1,1), c |> Seq.averageBy (snd >> float))
+    >> Seq.sortBy fst
+    >> Seq.toList
 
 let datas = 
-    result 
-    |> Seq.map (fun (_, s) ->
+    Seq.map (fun (_, s) ->
         let mostUsedName = s |> Seq.collect snd |> Seq.sortByDescending snd |> Seq.map fst |> Seq.head
         mostUsedName, s |> Seq.map (Snd.map (Seq.sumBy snd)))
-    |> Seq.map (fun (FirstName n, s) -> n, s |> Seq.map (fun (Year y, c) -> System.DateTime(y,1,1), float c) |> Seq.sortBy fst)
+    >> Seq.map (fun (FirstName n, s) -> n, s |> Seq.map (fun (Year y, c) -> System.DateTime(y,1,1), float c) |> Seq.sortBy fst)
 
-datas
+let av = average result
+
+datas result
 |> Seq.batch 5
-|> Seq.iter (fun d -> d |> Seq.toList |> graph average)
+|> Seq.iter (Seq.toList >> graph av)
+
+datas result |> Seq.toList |> graph av
