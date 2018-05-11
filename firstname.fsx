@@ -79,8 +79,16 @@ let pGirl = firstNames Sex.Girl |> phonetic phonex
 let boys = firstNames Sex.Boy
 let pBoys = boys |> phonetic phonex
 
+let total = pBoys |> Seq.collect (snd >> ( Seq.collect (snd) )) |> Seq.groupBy fst |> Seq.map (snd >> (Seq.maxBy snd) )
+
+//let total = pBoys |> Seq.map (Snd.map ( Seq.sumBy (snd >> (Seq.sumBy snd)) ))
+
+total |> Seq.sortByDescending snd |> Seq.take 50 |> Seq.toList
+
+total |> Seq.find (fst >> (=) (FirstName "MARC"))
+
 pBoys |> Seq.map (Snd.map (Seq.collect snd >> Seq.map fst >> Seq.distinct >> Seq.toList)) |> Map.ofSeq
-|> Map.tryFind (phonex "clement" |> Phonetic)
+|> Map.tryFind (phonex "france" |> Phonetic)
 
 boys |> Seq.map fst |> Seq.distinct |> Seq.length //14256
 pBoys |> Seq.length //7634
@@ -134,8 +142,8 @@ let datas =
 
 let av = average result
 
-datas result
-|> Seq.batch 5
-|> Seq.iter (Seq.toList >> graph av)
+//datas result
+//|> Seq.batch 5
+//|> Seq.iter (Seq.toList >> graph av)
 
 datas result |> Seq.toList |> graph av
