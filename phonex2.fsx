@@ -130,7 +130,8 @@ soundex2 "klement"
 
 phonex "PHYLAURHEIMSMET"
 
-phonex "clement"
+phonex "klement"
+phonex "clément"
 phonex "clement"
 
 phonex "yolaine"

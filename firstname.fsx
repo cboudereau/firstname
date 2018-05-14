@@ -31,12 +31,12 @@ type [<Struct>] FirstName = FirstName of string
 open Phonex2
 open XPlot.GoogleCharts
 
-type Sex = 
-    | Boy = 1
-    | Girl = 2
+type Gender = 
+    | Masculine = 1
+    | Feminine = 2
 
-module Sex = 
-    let value (s:Sex) = int s
+module Gender = 
+    let value (s:Gender) = int s
 
 module Phonetic = 
     let value (Phonetic p) = p
@@ -55,11 +55,11 @@ module Fst =
     let map f (x, y) = f x, y
 
 #time
-let firstNames sex = 
+let firstNames gender = 
     stats.Rows 
     |> Seq.choose (fun x -> 
         Int32.tryInt x.Annais 
-        |> Option.bind (fun y -> if x.Sexe = (sex |> Sex.value) then Some (FirstName x.Preusuel, (Year y, x.Nombre)) else None) )
+        |> Option.bind (fun y -> if x.Sexe = (gender |> Gender.value) then Some (FirstName x.Preusuel, (Year y, x.Nombre)) else None) )
 
 let phonetic f = 
     Seq.map (fun ((FirstName n), (y, c)) -> f n |> Phonetic, (y,(FirstName n,c)))
@@ -71,12 +71,12 @@ let phonetic f =
             >> Seq.map (Snd.map (Seq.map snd)) 
             >> Seq.sortBy fst))
 
-let pGirl = firstNames Sex.Girl |> phonetic phonex
+let pGirl = firstNames Gender.Feminine |> phonetic phonex
 
 //pGirl |> Seq.map (Snd.map (Seq.collect snd >> Seq.map fst >> Seq.distinct >> Seq.toList)) |> Map.ofSeq
 //|> Map.tryFind (phonex "yolène" |> Phonetic)
 
-let boys = firstNames Sex.Boy
+let boys = firstNames Gender.Masculine
 let pBoys = boys |> phonetic phonex
 
 let total = pBoys |> Seq.collect (snd >> ( Seq.collect (snd) )) |> Seq.groupBy fst |> Seq.map (snd >> (Seq.maxBy snd) )
@@ -88,7 +88,7 @@ total |> Seq.sortByDescending snd |> Seq.take 50 |> Seq.toList
 total |> Seq.find (fst >> (=) (FirstName "MARC"))
 
 pBoys |> Seq.map (Snd.map (Seq.collect snd >> Seq.map fst >> Seq.distinct >> Seq.toList)) |> Map.ofSeq
-|> Map.tryFind (phonex "france" |> Phonetic)
+|> Map.tryFind (phonex "Clément" |> Phonetic)
 
 boys |> Seq.map fst |> Seq.distinct |> Seq.length //14256
 pBoys |> Seq.length //7634
